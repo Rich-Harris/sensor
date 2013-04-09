@@ -96,16 +96,16 @@ document.getElementById( 'myButton' ).on( 'tap', handler );
 ```
 
 ```js
+people = document.getElementById( 'people' );
 handler = function () {
   var person = this.innerText; // `this` is the child element that matches the child selector
   alert( 'selected ' + person );
 };
 
 // traditional event delegation - use a CSS selector
-sensor( 'people' ).on( 'tap', 'li', handler );
+people.on( 'tap', 'li', handler );
 
 // alternative - use an array or array-like object (such as a NodeList)
-people = document.getElementById( 'people' );
 listItems = people.querySelectorAll( 'li' ); // or people.getElementsByTagName( 'li' )
 
 people.on( 'tap', listItems, handler )
