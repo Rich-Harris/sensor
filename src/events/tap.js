@@ -2,86 +2,104 @@
 
 	'use strict';
 
+	var sWindow = s( window );
+
 	s.define( 'tap', function ( el, sensor, fire ) {
-		var threshold, interval;
+		var threshold, interval, mouseListener, touchListener;
 
 		threshold = 5; // px
 		interval = 200; // ms
 
-		el.addEventListener( 'mousedown', function ( event ) {
-			var startX, startY, mouseup, mousemove, teardown;
+		mouseListener = sensor.on( 'mousedown', function ( downEvent ) {
+			var mousemove, mouseup, teardown, cancelled, startX, startY;
 
-			startX = event.offsetX;
-			startY = event.offsetY;
-
-			mouseup = function ( event ) {
-				fire( event.offsetX, event.offsetY, event );
-				teardown();
-			};
-
-			mousemove = function ( event ) {
-				if ( Math.abs( event.offsetX - startX ) > threshold || Math.abs( event.offsetY - startY ) > threshold ) {
-					teardown();
-				}
-			};
+			startX = downEvent.clientX;
+			startY = downEvent.clientY;
 
 			teardown = function () {
-				el.removeEventListener( 'mouseup', mouseup );
-				el.removeEventListener( 'mousemove', mousemove );
+				if ( cancelled ) {
+					return;
+				}
+
+				mouseup.cancel();
+				mousemove.cancel();
+
+				cancelled = true;
 			};
 
-			el.addEventListener( 'mouseup', mouseup );
-			el.addEventListener( 'mousemove', mousemove );
+			mouseup = sWindow.on( 'mouseup', function ( upEvent ) {
+				fire.call( downEvent.target, downEvent.offsetX, downEvent.offsetY, upEvent );
+				teardown();
+			});
+
+			mousemove = sWindow.on( 'mousemove', function ( event ) {
+				var x = event.clientX, y = event.clientY;
+
+				if ( Math.abs( x - startX ) > threshold || Math.abs( y - startY ) > threshold ) {
+					teardown();
+				}
+			});
 
 			setTimeout( teardown, interval );
 		});
 
-		el.addEventListener( 'touchstart', function ( event ) {
-			var startX, startY, mouseup, mousemove, teardown, touch, finger;
+		touchListener = sensor.on( 'touchstart', function ( event ) {
+			var touch, finger, target, startX, startY, touchstart, touchmove, touchend, touchcancel, teardown, cancelled;
 
-			touch = event.changedTouches[0];
+			if ( event.touches.length !== 1 ) {
+				return;
+			}
+
+			touch = event.touches[0];
 			finger = touch.identifier;
+			target = touch.target;
 
-			startX = touch.offsetX;
-			startY = touch.offsetY;
-
-			touchend = function ( event ) {
-				var touch;
-
-				touch = event.changedTouches[0];
-				if ( touch.identifier !== finger ) {
-					return;
-				}
-
-				fire( touch.offsetX, touch.offsetY, event );
-				teardown();
-			};
-
-			touchmove = function ( event ) {
-				var touch;
-
-				touch = event.changedTouches[0];
-				if ( touch.identifier !== finger ) {
-					return;
-				}
-
-				if ( Math.abs( touch.offsetX - startX ) > threshold || Math.abs( touch.offsetY - startY ) > threshold ) {
-					teardown();
-				}
-			};
+			startX = touch.clientX;
+			startY = touch.clientY;
 
 			teardown = function () {
-				el.removeEventListener( 'touchend', touchend );
-				el.removeEventListener( 'touchcancel', teardown );
-				el.removeEventListener( 'touchmove', touchmove );
+				if ( cancelled ) {
+					return;
+				}
+
+				touchstart.cancel();
+				touchend.cancel();
+				touchmove.cancel();
+				touchcancel.cancel();
+
+				cancelled = true;
 			};
 
-			el.addEventListener( 'touchend', touchend );
-			el.addEventListener( 'touchcancel', teardown );
-			el.addEventListener( 'touchmove', touchmove );
+			// if another finger touches before tap has completed, abort
+			touchstart = sWindow.on( 'touchstart', teardown );
+
+			touchend = sWindow.on( 'touchend', function ( upEvent ) {
+				fire.call( target, touch.offsetX, touch.offsetY, upEvent );
+				teardown();
+			});
+
+			touchmove = sWindow.on( 'touchmove', function ( event ) {
+				var touch, x, y;
+
+				touch = event.touches[0];
+
+				x = touch.clientX;
+				y = touch.clientY;
+
+				if ( Math.abs( x - startX ) > threshold || Math.abs( y - startY ) > threshold ) {
+					teardown();
+				}
+			});
 
 			setTimeout( teardown, interval );
 		});
+
+		return {
+			teardown: function () {
+				mouseListener.cancel();
+				touchListener.cancel();
+			}
+		};
 	});
 
 }( sensor ));
