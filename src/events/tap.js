@@ -1,16 +1,18 @@
-(function ( s ) {
+// tap event
+
+(function ( sensor ) {
 
 	'use strict';
 
-	var sWindow = s( window );
+	var sWindow = sensor( window );
 
-	s.define( 'tap', function ( el, sensor, fire ) {
+	sensor.define( 'tap', function ( el, elSensor, fire ) {
 		var threshold, interval, mouseListener, touchListener;
 
 		threshold = 5; // px
 		interval = 200; // ms
 
-		mouseListener = sensor.on( 'mousedown', function ( downEvent ) {
+		mouseListener = elSensor.on( 'mousedown', function ( downEvent ) {
 			var mousemove, mouseup, teardown, cancelled, startX, startY;
 
 			startX = downEvent.clientX;
@@ -43,7 +45,7 @@
 			setTimeout( teardown, interval );
 		});
 
-		touchListener = sensor.on( 'touchstart', function ( event ) {
+		touchListener = elSensor.on( 'touchstart', function ( event ) {
 			var touch, finger, target, startX, startY, touchstart, touchmove, touchend, touchcancel, teardown, cancelled;
 
 			if ( event.touches.length !== 1 ) {
@@ -103,3 +105,4 @@
 	});
 
 }( sensor ));
+

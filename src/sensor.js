@@ -1,4 +1,4 @@
-var sensor, proto, definitions, patched, matches, classPattern, cachedPatterns, proxy;
+var sensor, proto, definitions, patched, matches, classPattern, cachedPatterns, proxy, getElFromString;
 
 sensor = function ( el ) {
 	var sensor;
@@ -26,7 +26,7 @@ sensor = function ( el ) {
 	sensor = Object.create( proto );
 
 	sensor.el = el;
-	sensor.packages = {};
+	sensor.listeners = {};
 	sensor.boundEvents = {};
 
 	el.__sensor = sensor;
@@ -37,12 +37,12 @@ sensor = function ( el ) {
 proto = {
 	on: function ( eventName, childSelector, handler ) {
 
-		var self = this, packages, package, definition, cancelled, map, key, index;
+		var self = this, listeners, listener, cancelled, map, key, index;
 
 		// allow multiple listeners to be attached in one go
 		if ( typeof eventName === 'object' ) {
 			map = eventName;
-			packages = [];
+			listeners = [];
 
 			for ( key in map ) {
 				if ( map.hasOwnProperty( key ) ) {
@@ -67,21 +67,21 @@ proto = {
 						handler = map[ key ].handler;
 					}
 
-					package = {
+					listener = {
 						eventName: eventName,
 						childSelector: childSelector,
 						handler: handler
 					};
 
-					this._addPackage( package );
+					this._addListener( listener );
 				}
 			}
 
 			return {
 				cancel: function () {
 					if ( !cancelled ) {
-						while ( packages.length ) {
-							self.off( packages.pop() );
+						while ( listeners.length ) {
+							self.off( listeners.pop() );
 						}
 						cancelled = true;
 					}
@@ -90,23 +90,23 @@ proto = {
 		}
 
 		// there may not be a child selector involved
-		if ( arguments.length === 2 ) {
+		if ( !handler ) {
 			handler = childSelector;
 			childSelector = null;
 		}
 
-		package = {
+		listener = {
 			eventName: eventName,
 			childSelector: childSelector,
 			handler: handler
 		};
 
-		this._addPackage( package );
+		this._addListener( listener );
 
 		return {
 			cancel: function () {
 				if ( !cancelled ) {
-					self.off( package );
+					self.off( listener );
 					cancelled = true;
 				}
 			}
@@ -114,58 +114,57 @@ proto = {
 	},
 
 	off: function ( eventName, childSelector, handler ) {
-		var self = this, packages, package, packagesToRemove, index, teardown;
+		var self = this, listeners, listener, index, teardown, name;
 
 		teardown = function ( eventName ) {
-			delete self.packages[ eventName ];
+			delete self.listeners[ eventName ];
 
 			self.boundEvents[ eventName ].teardown();
 			delete self.boundEvents[ eventName ];
 		};
 
-		// no arguments supplied - remove all packages for all event types
+		// no arguments supplied - remove all listeners for all event types
 		if ( !arguments.length ) {
-			for ( eventName in this.boundEvents ) {
-				if ( this.boundEvents.hasOwnProperty( eventName ) ) {
-					teardown( eventName );
+			for ( name in this.boundEvents ) {
+				if ( this.boundEvents.hasOwnProperty( name ) ) {
+					teardown( name );
 				}
 			}
 
 			return;
 		}
 
-		// one argument supplied - could be a package (via listener.cancel) or
+		// one argument supplied - could be a listener (via listener.cancel) or
 		// an event name
 		if ( arguments.length === 1 ) {
 			if ( typeof eventName === 'object' ) {
-				package = eventName;
-				eventName = package.eventName;
+				listener = eventName;
+				eventName = listener.eventName;
 
-				packages = this.packages[ eventName ];
+				listeners = this.listeners[ eventName ];
 
-				if ( !packages ) {
+				if ( !listeners ) {
 					return;
 				}
 
-				index = packages.indexOf( package );
+				index = listeners.indexOf( listener );
 
 				if ( index === -1 ) {
 					return;
 				}
 
-				packages.splice( index, 1 );
+				listeners.splice( index, 1 );
 
-				if ( !packages.length ) {
+				if ( !listeners.length ) {
 					teardown( eventName );
 				}
 
 				return;
 			}
 
-			else {
-				teardown( eventName );
-				return;
-			}
+			// otherwise it's a string, i.e. an event name
+			teardown( eventName );
+			return;
 		}
 
 		// two arguments supplied
@@ -176,17 +175,17 @@ proto = {
 				childSelector = null;
 			}
 
-			// no handler supplied, which means we're removing all packages applying
+			// no handler supplied, which means we're removing all listeners applying
 			// to this event name and child selector
 			else {
-				packages = this.packages[ eventName ];
+				listeners = this.listeners[ eventName ];
 
-				if ( packages ) {
-					this.packages[ eventName ] = packages.filter( function ( package ) {
-						return package.childSelector !== childSelector;
+				if ( listeners ) {
+					this.listeners[ eventName ] = listeners.filter( function ( listener ) {
+						return listener.childSelector !== childSelector;
 					});
 
-					if ( !this.packages[ eventName ].length ) {
+					if ( !this.listeners[ eventName ].length ) {
 						teardown( eventName );
 					}
 				}
@@ -196,21 +195,21 @@ proto = {
 		}
 
 		// we have an event name, a child selector (possibly null), and a handler
-		if ( this.packages[ eventName ] ) {
+		if ( this.listeners[ eventName ] ) {
 
 			if ( childSelector ) {
-				this.packages[ eventName ] = this.packages[ eventName ].filter( function ( package ) {
-					return package.childSelector !== childSelector || package.handler !== handler;
+				this.listeners[ eventName ] = this.listeners[ eventName ].filter( function ( listener ) {
+					return listener.childSelector !== childSelector || listener.handler !== handler;
 				});
 			}
 
 			else {
-				this.packages[ eventName ] = this.packages[ eventName ].filter( function ( package ) {
-					return package.childSelector  || package.handler !== handler;
+				this.listeners[ eventName ] = this.listeners[ eventName ].filter( function ( listener ) {
+					return listener.childSelector  || listener.handler !== handler;
 				});
 			}
 
-			if ( !this.packages[ eventName ].length ) {
+			if ( !this.listeners[ eventName ].length ) {
 				teardown( eventName );
 			}
 
@@ -234,14 +233,14 @@ proto = {
 		return suicidalListener;
 	},
 
-	_addPackage: function ( package ) {
-		var eventName = package.eventName;
+	_addListener: function ( listener ) {
+		var eventName = listener.eventName;
 
-		if ( !this.packages[ eventName ] ) {
-			this.packages[ eventName ] = [];
+		if ( !this.listeners[ eventName ] ) {
+			this.listeners[ eventName ] = [];
 		}
 
-		this.packages[ eventName ].push( package );
+		this.listeners[ eventName ].push( listener );
 		this._bindEvent( eventName );
 	},
 
@@ -262,18 +261,16 @@ proto = {
 
 			// apply definition
 			this.boundEvents[ eventName ] = definition.call( null, this.el, this, function () {
-				var packages, package, i, el, match;
+				var listeners, listener, i, el, match;
 
-				// clone packages, so any listeners bound by the handler don't
+				// clone listeners, so any listeners bound by the handler don't
 				// get called until it's their turn (e.g. doubletap)
+				listeners = self.listeners[ eventName ].slice();
 
-				//packages = self.packages[ eventName ].slice();
-				packages = self.packages[ eventName ].slice();
+				for ( i=0; i<listeners.length; i+=1 ) {
+					listener = listeners[i];
 
-				for ( i=0; i<packages.length; i+=1 ) {
-					package = packages[i];
-
-					if ( package.childSelector ) {
+					if ( listener.childSelector ) {
 						el = this;
 
 						if ( el === self.el ) {
@@ -281,7 +278,7 @@ proto = {
 						}
 
 						while ( !match && el !== self.el ) {
-							if ( matches( el, package.childSelector ) ) {
+							if ( matches( el, listener.childSelector ) ) {
 								match = el;
 							}
 
@@ -289,11 +286,11 @@ proto = {
 						}
 
 						if ( match ) {
-							package.handler.apply( match, arguments );
+							listener.handler.apply( match, arguments );
 						}
 
 					} else {
-						package.handler.apply( self.el, arguments );
+						listener.handler.apply( self.el, arguments );
 					}
 				}
 			});
@@ -406,7 +403,7 @@ getElFromString = function ( str ) {
 
 
 proxy = function ( eventName ) {
-	var definition = function ( el, sensor, fire ) {
+	var definition = function ( el, elSensor, fire ) {
 		var handler = function ( event ) {
 			fire.call( event.target, event );
 		};
@@ -424,3 +421,4 @@ proxy = function ( eventName ) {
 
 	return definition;
 };
+

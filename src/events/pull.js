@@ -1,17 +1,19 @@
-(function ( s ) {
+// pull events
+
+(function ( sensor ) {
 
 	'use strict';
 
 	// TODO touch equivalents
 
-	s.define( 'pullstart', function ( el, sensor, fire ) {
-		var listener = sensor.on( 'mousedown', function ( event ) {
+	sensor.define( 'pullstart', function ( el, elSensor, fire ) {
+		var listener = elSensor.on( 'mousedown', function ( event ) {
 			var x, y;
 
 			x = event.offsetX;
 			y = event.offsetY;
 
-			sensor.pull = {
+			elSensor.pull = {
 				start: {
 					x: x,
 					y: y
@@ -31,26 +33,22 @@
 	});
 
 
-	s.define( 'pull', function ( el, sensor, fire ) {
-		var listener = sensor.on( 'pullstart', function ( startX, startY ) {
-			var mousemove, moveListener, endListener;
+	sensor.define( 'pull', function ( el, elSensor, fire ) {
+		var listener = elSensor.on( 'pullstart', function () {
+			var moveListener;
 
-			sensor.once( 'mouseup', function () {
-				moveListener.cancel();
-			});
-
-			mousemove = function ( event ) {
+			moveListener = elSensor.on( 'mousemove', function ( event ) {
 				var x, y;
 
 				x = event.offsetX;
 				y = event.offsetY;
 
-				fire.call( el, x - sensor.pull.last.x, y - sensor.pull.last.y );
-				sensor.pull.last.x = x;
-				sensor.pull.last.y = y;
-			};
+				fire.call( el, x - elSensor.pull.last.x, y - elSensor.pull.last.y );
+				elSensor.pull.last.x = x;
+				elSensor.pull.last.y = y;
+			});
 
-			moveListener = sensor.on( 'mousemove', mousemove );
+			elSensor.once( 'mouseup', moveListener.cancel );
 		});
 
 		return {
@@ -60,10 +58,10 @@
 
 
 
-	s.define( 'pullend', function ( el, sensor, fire ) {
-		var listener = sensor.on( 'pullstart', function ( x, y, event ) {
-			mouseupListener = sensor.once( 'mouseup', function ( x, y, event ) {
-				fire.call( el, x, y );
+	sensor.define( 'pullend', function ( el, elSensor, fire ) {
+		var listener = elSensor.on( 'pullstart', function () {
+			elSensor.once( 'mouseup', function ( x, y, event ) {
+				fire.call( el, x, y, event );
 			});
 		});
 
