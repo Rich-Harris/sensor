@@ -1,4 +1,4 @@
-// Sensor v0.1.1
+// Sensor v0.1.0
 // Copyright (2013) Rich Harris
 // Released under the MIT License
 

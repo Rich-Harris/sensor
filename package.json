@@ -1,7 +1,7 @@
 {
   "name": "sensor",
-  "version": "0.1.1",
-  "description": "Utility for defining custom user interaction events, e.g. tap, swipe, zoom etc",
+  "version": "0.1.0",
+  "description": "DOM events that don't suck",
   "main": "build/sensor.js",
   "repository": "",
   "author": "Rich Harris",

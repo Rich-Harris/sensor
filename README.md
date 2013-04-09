@@ -83,7 +83,7 @@ window.on( 'resize', resizeHandler );
 document.getElementById( 'myButton' ).on( 'tap', handler );
 ```
 
-(This kind of 'monkey patching' is controversial, obviously - use it at your own discretion!)
+(This kind of 'monkey patching' is controversial, obviously - use it at your own discretion! But let me tell you - it's goddamn *liberating*.)
 
 **Thirdly**, it allows simple *event delegation*, allowing you to efficiently target multiple elements (including ones that don't yet exist):
 
@@ -118,7 +118,7 @@ filter = function ( el ) {
 people.on( 'tap', filter, handler );
 ```
 
-**Fourthly**, it allows you to define custom events using `sensor.define( eventName, eventDefinition );`. **sensor.js** comes bundled with a number of default custom events, but you can easily add more if your app uses unique gestures, for example. (At some point I'll document how... for the time being you'll have to make do with the notes in the API section below or reverse engineer the existing examples!)
+**Fourthly**, it allows you to define custom events using `sensor.define( eventName, eventDefinition )`. **sensor.js** comes bundled with a number of default custom events, but you can easily add more if your app uses unique gestures, for example. (At some point I'll document how... for the time being you'll have to make do with the notes in the API section below or reverse engineer the existing examples!)
 
 
 API
@@ -140,11 +140,11 @@ Returns a new sensor instance, or returns the existing one. *selector* is a CSS 
 Patches `Node.prototype` and `Window.prototype` so you can treat `window` and any DOM elements as though they were sensor instances
 
 ###sensor.define( *eventName*, *eventDefinition* )
-Defines a custom event. Thereafter, you can do e.g. `listener = element.on( 'myCustomEvent', doSomething );`. Event definitions take three arguments: `el`, `elSensor`, `fire`:
+Defines a custom event. Thereafter, you can do e.g. `listener = element.on( 'myCustomEvent', doSomething )`. Event definitions take three arguments: `el`, `elSensor`, `fire`:
 
 * `el` - the element the event is bound to
 * `elSensor` - the element's sensor instance
-* `fire` - the function that should be called when the event is to be triggered. It should be called with the original event's target as context (to facilitate event delegation), but can have any signature (though it is wise to pass along any relevant Event objects). It must return on object with a `teardown` property, which is used to cancel any listeners (e.g. to underlying `mousedown` or `touchstart` events) it depended on.
+* `fire` - the function that should be called when the event is to be triggered. It should be called with the original event's target as context (to facilitate event delegation), but can have any signature (though it is wise to pass along any relevant `Event` objects). It must return an object with a `teardown` property, which is used to cancel any listeners (e.g. to underlying `mousedown` or `touchstart` events) it depended on.
 
 
 Instance methods
@@ -161,7 +161,7 @@ Returns a *listener*, which is an object with a `cancel` method for cancelling t
 ###element.on( *eventName*, *childSelector*, *handler* )
 Triggers *handler* when a descendant of *element* matching *childSelector* is the subject of an *eventName* event. *childSelector* can take one of three forms:
 
-* CSS selector string (tag name selectors, such as 'li', and class name selectors, such as '.item', will work everywhere. More complicated selectors depend on the presence of `element.matches( selector )` (or a prefixed equivalent) - if you're targeting IE8 and below you will need to bring your own polyfill ([here's one you could use](https://github.com/termi/CSS_selector_engine))
+* CSS selector string (tag name selectors, such as `'li'`, and class name selectors, such as `'.item'`, will work everywhere. More complicated selectors depend on the presence of `element.matches( selector )` or a prefixed equivalent - if you're targeting IE8 and below you will need to bring your own polyfill ([here's one you could use](https://github.com/termi/CSS_selector_engine))
 * Array or array-like object (such as a NodeList) containing the targeted elements
 * Filter function, which receives an element as its sole argument and returns a truthy value if the element is a match, a falsy value otherwise
 
