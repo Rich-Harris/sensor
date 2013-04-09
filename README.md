@@ -2,11 +2,12 @@ sensor.js - DOM events that don't suck
 ======================================
 
 tl:dr;
+------
 
 * cleaner, more efficient API for event binding
 * use as `sensor(element).on('click', handler)`, or use `sensor.patch()` so you can do `element.on('click', handler)`
 * first-class custom events - ever wanted `element.on( 'swipeleft', nextSlide );`? Extensible so you can redefine events so they behave the way your app needs
-* cross-browser, cross-paradigm (mouse, touch, [pointer](http://msdn.microsoft.com/en-gb/library/ie/hh673557(v=vs.85).aspx))
+* cross-browser, cross-paradigm (mouse, touch, pointer)
 
 
 The problem
@@ -21,7 +22,6 @@ el.addEventListener( 'click', handler = function () {
 });
 
 // later...
-
 el.removeEventListener( 'click', handler );
 ```
 
@@ -60,7 +60,7 @@ button.on( 'tap', handler = function () {
 });
 
 button.once( 'mouseover', function () {
-  alert( 'moused over! you won't see me again, because we used button.once()' );
+  alert( 'moused over! you won\'t see me again, because we used button.once()' );
 });
 
 // later...
